@@ -1,0 +1,14 @@
+.venv/
+.idea/
+
+data/
+
+checkpoints/
+wandb/
+lightning_logs/
+
+__pycache__/
+*.py[cod]
+
+.ipynb_checkpoints/
+
