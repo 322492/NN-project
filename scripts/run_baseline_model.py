@@ -10,6 +10,7 @@ from scripts.train_baseline_cnn import train, prepare_data_splits
 from src.detection.bbox_visualization import drew_bbox_and_save
 from src.config.load_config import load_config
 from src.detection.nms import non_max_suppression
+from src.detection.detection_metrics import evaluate_detections
 
 torch.manual_seed(42)
 
@@ -89,6 +90,12 @@ boxes, scores = non_max_suppression(
     scores,
     iou_threshold=config["nms"]["iou_threshold"],
 )
+metrics = evaluate_detections(
+    pred_boxes=boxes,
+    pred_scores=scores,
+    true_boxes=true_bboxes,
+    iou_threshold=config["metrics"]["iou_threshold"],
+)
 
 print("image:", image_path)
 print(
@@ -98,6 +105,15 @@ print(
     boxes_before_nms,
     "vs ground truth:",
     len(true_bboxes),
+)
+print(
+    "metrics:",
+    "TP =", metrics["tp"],
+    "FP =", metrics["fp"],
+    "FN =", metrics["fn"],
+    "precision =", f"{metrics['precision']:.4f}",
+    "recall =", f"{metrics['recall']:.4f}",
+    "f1 =", f"{metrics['f1']:.4f}",
 )
 
 print(debug_sample["image_path"])
