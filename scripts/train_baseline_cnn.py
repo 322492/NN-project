@@ -48,8 +48,16 @@ def train(cnn, criterion, device, train_samples, val_samples, config):
         negative_iou_threshold=config["cnn_dataset"]["negative_iou_threshold"],
     )
 
-    train_window_loader = DataLoader(train_window_dataset, batch_size=32, shuffle=True)
-    val_window_loader = DataLoader(val_window_dataset, batch_size=32, shuffle=False)
+    train_window_loader = DataLoader(
+        train_window_dataset,
+        batch_size=config["cnn_training"]["batch_size"],
+        shuffle=True,
+    )
+    val_window_loader = DataLoader(
+        val_window_dataset,
+        batch_size=config["cnn_training"]["batch_size"],
+        shuffle=False,
+    )
 
     print("train images:", len(train_samples))
     print("val images:", len(val_samples))
@@ -85,6 +93,7 @@ def train(cnn, criterion, device, train_samples, val_samples, config):
             f"val acc: {val_acc:.4f}"
         )
 
-    Path("../checkpoints").mkdir(exist_ok=True)
-    torch.save(cnn.state_dict(), "../checkpoints/baseline_cnn.pt")
-    print("Saved checkpoint: ../checkpoints/baseline_cnn.pt")
+    checkpoint_path = Path(config["cnn_training"]["checkpoint_path"])
+    checkpoint_path.parent.mkdir(exist_ok=True)
+    torch.save(cnn.state_dict(), checkpoint_path)
+    print(f"Saved checkpoint: {checkpoint_path}")
