@@ -2,6 +2,7 @@
 .idea/
 
 data/
+src/detection/outputs
 
 checkpoints/
 wandb/

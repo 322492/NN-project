@@ -22,7 +22,7 @@ class SimpleCNN(nn.Module):
     def forward(self, x):
         return self.net(x)
 
-def train_one_epoch(model, loader, optimizer, criterion, device):
+def train_one_epoch(model, loader, optimizer, criterion, device, threshold=0.5):
     model.train()
     total_loss = 0.0
     total_correct = 0
@@ -39,7 +39,7 @@ def train_one_epoch(model, loader, optimizer, criterion, device):
         optimizer.step()
 
         probs = torch.sigmoid(logits)
-        preds = (probs >= 0.5).float()
+        preds = (probs >= threshold).float()
 
         total_loss += loss.item() * x.size(0)
         total_correct += (preds == y).sum().item()
@@ -51,7 +51,7 @@ def train_one_epoch(model, loader, optimizer, criterion, device):
     return total_loss / total_samples, total_correct / total_samples
 
 @torch.no_grad()
-def evaluate(model, loader, criterion, device):
+def evaluate(model, loader, criterion, device, threshold=0.5):
     model.eval()
     total_loss = 0.0
     total_correct = 0
@@ -64,7 +64,7 @@ def evaluate(model, loader, criterion, device):
         loss = criterion(logits, y)
 
         probs = torch.sigmoid(logits)
-        preds = (probs >= 0.5).float()
+        preds = (probs >= threshold).float()
 
         total_loss += loss.item() * x.size(0)
         total_correct += (preds == y).sum().item()

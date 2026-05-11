@@ -9,15 +9,15 @@ from src.datasets.ena24_window_dataset import ENA24WindowDataset
 from src.models.baseline.cnn_classifier import train_one_epoch, evaluate
 
 
-def prepare_data_splits(data_dir="../data/ena24_sample"):
-    torch.manual_seed(42)
+def prepare_data_splits(data_dir="../data/ena24_sample", train_ratio=0.6, val_ratio=0.2, seed=42):
+    torch.manual_seed(seed)
 
     full_dataset = ENA24DetectionDataset(
         data_dir=data_dir,
     )
 
-    train_size = int(0.6 * len(full_dataset))
-    val_size = int(0.2 * len(full_dataset))
+    train_size = int(train_ratio * len(full_dataset))
+    val_size = int(val_ratio * len(full_dataset))
     test_size = len(full_dataset) - train_size - val_size
 
     train_detection_dataset, val_detection_dataset, test_detection_dataset = random_split(
@@ -33,9 +33,20 @@ def prepare_data_splits(data_dir="../data/ena24_sample"):
     return full_dataset, train_samples, val_samples, test_samples
 
 
-def train(cnn, criterion, device, train_samples, val_samples):
-    train_window_dataset = ENA24WindowDataset(train_samples)
-    val_window_dataset = ENA24WindowDataset(val_samples)
+def train(cnn, criterion, device, train_samples, val_samples, config):
+    train_window_dataset = ENA24WindowDataset(
+        train_samples,
+        crop_size=config["cnn_dataset"]["crop_size"],
+        negative_per_positive=config["cnn_dataset"]["negative_per_positive"],
+        negative_iou_threshold=config["cnn_dataset"]["negative_iou_threshold"],
+    )
+
+    val_window_dataset = ENA24WindowDataset(
+        val_samples,
+        crop_size=config["cnn_dataset"]["crop_size"],
+        negative_per_positive=config["cnn_dataset"]["negative_per_positive"],
+        negative_iou_threshold=config["cnn_dataset"]["negative_iou_threshold"],
+    )
 
     train_window_loader = DataLoader(train_window_dataset, batch_size=32, shuffle=True)
     val_window_loader = DataLoader(val_window_dataset, batch_size=32, shuffle=False)
@@ -45,8 +56,8 @@ def train(cnn, criterion, device, train_samples, val_samples):
     print("train CNN crops:", len(train_window_dataset))
     print("val CNN crops:", len(val_window_dataset))
 
-    optimizer = torch.optim.Adam(cnn.parameters(), lr=1e-3)
-    num_epochs = 10
+    optimizer = torch.optim.Adam(cnn.parameters(), lr=config["cnn_training"]["learning_rate"])
+    num_epochs = config["cnn_training"]["num_epochs"]
 
     for epoch in range(num_epochs):
         train_loss, train_acc = train_one_epoch(
@@ -55,6 +66,7 @@ def train(cnn, criterion, device, train_samples, val_samples):
             optimizer,
             criterion,
             device,
+            threshold=config["cnn_training"]["threshold"]
         )
 
         val_loss, val_acc = evaluate(
@@ -62,6 +74,7 @@ def train(cnn, criterion, device, train_samples, val_samples):
             val_window_loader,
             criterion,
             device,
+            threshold=config["cnn_training"]["threshold"]
         )
 
         print(
