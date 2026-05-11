@@ -102,7 +102,7 @@ class ENA24WindowDataset(Dataset):
         image = image.crop((x1, y1, x2, y2))
 
         image = self.transform(image)
-        label = torch.tensor(label, dtype=torch.long)
+        label = torch.tensor(label, dtype=torch.float32)
 
         return image, label
 
