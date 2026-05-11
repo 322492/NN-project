@@ -9,6 +9,7 @@ from src.models.baseline.sliding_window_detection import SlidingWindow
 from scripts.train_baseline_cnn import train, prepare_data_splits
 from src.detection.bbox_visualization import drew_bbox_and_save
 from src.config.load_config import load_config
+from src.detection.nms import non_max_suppression
 
 torch.manual_seed(42)
 
@@ -82,11 +83,19 @@ image_path = debug_sample["image_path"]
 true_bboxes = debug_sample["bboxes"]
 
 boxes, scores = detector.predict_window(image_path)
+boxes_before_nms = len(boxes)
+boxes, scores = non_max_suppression(
+    boxes,
+    scores,
+    iou_threshold=config["nms"]["iou_threshold"],
+)
 
 print("image:", image_path)
 print(
-    "number of detections:",
+    "number of detections after NMS:",
     len(boxes),
+    "from:",
+    boxes_before_nms,
     "vs ground truth:",
     len(true_bboxes),
 )
