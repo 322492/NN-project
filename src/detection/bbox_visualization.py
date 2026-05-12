@@ -32,3 +32,29 @@ def drew_bbox_and_save(image_path, boxes, true_boxes, config):
         true_boxes,
         result_image_path,
     )
+
+def test_image_visualize(full_dataset, detector, non_max_suppression, config):
+    # konkretne zdj
+    DEBUG_IMAGE_NAME = "960.jpg"
+    debug_sample = None
+
+    for sample in full_dataset.samples:
+        if sample["file_name"] == DEBUG_IMAGE_NAME:
+            debug_sample = sample
+            break
+
+    if debug_sample is None:
+        raise ValueError(f"Image not found: {DEBUG_IMAGE_NAME}")
+
+    image_path = debug_sample["image_path"]
+    true_bboxes = debug_sample["bboxes"]
+
+    boxes, scores = detector.predict_window(image_path)
+    boxes_before_nms = len(boxes)
+    boxes, scores = non_max_suppression(
+        boxes,
+        scores,
+        iou_threshold=config["nms"]["iou_threshold"],
+    )
+
+    drew_bbox_and_save(image_path, boxes, true_bboxes, config)
