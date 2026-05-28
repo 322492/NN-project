@@ -9,6 +9,7 @@ from scripts.train_baseline_cnn import train, prepare_data_splits
 from src.detection.bbox_visualization import drew_bbox_and_save, test_image_visualize
 from src.config.load_config import load_config
 from src.detection.nms import non_max_suppression
+from src.detection.detection_metrics import evaluate_detections
 from src.utils.wandb_utils import init_wandb, wandb_log, finish_wandb
 from src.models.baseline.resnet_classifier import ResNetBinaryClassifier
 torch.manual_seed(42)
@@ -69,12 +70,12 @@ else:
     )
 
 ## sliding window
-# pipeline_run = init_wandb(
-#     config=config,
-#     enabled=USE_WANDB_PIPELINE,
-#     project="ena24-baseline",
-#     job_type="pipeline_eval"
-# )
+pipeline_run = init_wandb(
+    config=config,
+    enabled=USE_WANDB_PIPELINE,
+    project="ena24-baseline",
+    job_type="pipeline_eval"
+)
 
 cnn.eval()
 detector = SlidingWindow(
@@ -86,86 +87,102 @@ detector = SlidingWindow(
     device=device,
 )
 
-# ## test
-# total_true_boxes = 0
-# sum_iou = 0.0
-#
-# total_boxes_before_nms = 0
-# total_boxes_after_nms = 0
-#
-# for idx, sample in enumerate(val_samples):
-#     image_path = sample["image_path"]
-#     true_bboxes = sample["bboxes"]
-#
-#     # sliding window
-#     boxes, confidence_scores = detector.predict_window(image_path)
-#     boxes_before_nms = len(boxes)
-#
-#     # NMS
-#     boxes, confidence_scores = non_max_suppression(
-#         boxes,
-#         confidence_scores,
-#         iou_threshold=config["nms"]["iou_threshold"],
-#     )
-#
-#     total_boxes_before_nms += boxes_before_nms
-#     total_boxes_after_nms += len(boxes)
-#
-#     print(f"{idx}/{len(val_samples)}")
-#     #print("image:", image_path)
-#     # print(
-#     #     "number of detections after NMS:",
-#     #     len(boxes),
-#     #     "from:",
-#     #     boxes_before_nms,
-#     #     "vs ground truth:",
-#     #     len(true_bboxes),
-#     # )
-#     # print("number of detections:", len(boxes), "vs ground truth:", len(true_bboxes))
-#
-#     matches = match_true_boxes_with_predictions(
-#         true_bboxes=true_bboxes,
-#         pred_boxes=boxes,
-#         pred_confidence_scores=confidence_scores
-#     )
-#     for match in matches:
-#
-#         iou = match["iou"]
-#
-#         total_true_boxes += 1
-#         sum_iou += iou
-#
-#
-#         # print(
-#         #     "true box idx:", match["true_box_idx"],
-#         #     "best: "
-#         #     "confidence_score:", match["best_confidence_score"],
-#         #     "IoU:", match["iou"],
-#         # )
-#
-#     #drew_bbox_and_save(image_path, boxes, true_bboxes, config)
-#
-#
-# avg_boxes_before_nms = (
-#     total_boxes_before_nms / len(val_samples)
-#     if len(val_samples) > 0
-#     else 0.0
-# )
-#
-# avg_boxes_after_nms = (
-#     total_boxes_after_nms / len(val_samples)
-#     if len(val_samples) > 0
-#     else 0.0
-# )
-#
-# val_metrics = {
-#     "val_mean_iou": mean_iou(sum_iou, total_true_boxes),
-#     "val_avg_boxes_before_nms": avg_boxes_before_nms,
-#     "val_avg_boxes_after_nms": avg_boxes_after_nms,
-# }
-#
-# wandb_log(pipeline_run, val_metrics)
-# finish_wandb(pipeline_run)
-#
-# print(f'mean_iou = {val_metrics["val_mean_iou"]}')
+## test
+total_true_boxes = 0
+sum_iou = 0.0
+
+total_boxes_before_nms = 0
+total_boxes_after_nms = 0
+
+for idx, sample in enumerate(val_samples):
+    image_path = sample["image_path"]
+    true_bboxes = sample["bboxes"]
+
+    # sliding window
+    boxes, confidence_scores = detector.predict_window(image_path)
+    boxes_before_nms = len(boxes)
+
+    # NMS
+    boxes, confidence_scores = non_max_suppression(
+        boxes,
+        confidence_scores,
+        iou_threshold=config["nms"]["iou_threshold"],
+    )
+    metrics = evaluate_detections(
+        pred_boxes=boxes,
+        pred_scores=confidence_scores,
+        true_boxes=true_bboxes,
+        iou_threshold=config["metrics"]["iou_threshold"],
+    )
+
+    total_boxes_before_nms += boxes_before_nms
+    total_boxes_after_nms += len(boxes)
+
+    print(f"{idx}/{len(val_samples)}")
+    #print("image:", image_path)
+    # print(
+    #     "number of detections after NMS:",
+    #     len(boxes),
+    #     "from:",
+    #     boxes_before_nms,
+    #     "vs ground truth:",
+    #     len(true_bboxes),
+    # )
+    # print("number of detections:", len(boxes), "vs ground truth:", len(true_bboxes))
+
+    # print(
+    #     "metrics:",
+    #     "TP =", metrics["tp"],
+    #     "FP =", metrics["fp"],
+    #     "FN =", metrics["fn"],
+    #     "precision =", f"{metrics['precision']:.4f}",
+    #     "recall =", f"{metrics['recall']:.4f}",
+    #     "f1 =", f"{metrics['f1']:.4f}",
+    # )
+
+    matches = match_true_boxes_with_predictions(
+        true_bboxes=true_bboxes,
+        pred_boxes=boxes,
+        pred_confidence_scores=confidence_scores
+    )
+    for match in matches:
+
+        iou = match["iou"]
+
+        total_true_boxes += 1
+        sum_iou += iou
+
+
+        # print(
+        #     "true box idx:", match["true_box_idx"],
+        #     "best: "
+        #     "confidence_score:", match["best_confidence_score"],
+        #     "IoU:", match["iou"],
+        # )
+
+    #drew_bbox_and_save(image_path, boxes, true_bboxes, config)
+
+
+avg_boxes_before_nms = (
+    total_boxes_before_nms / len(val_samples)
+    if len(val_samples) > 0
+    else 0.0
+)
+
+avg_boxes_after_nms = (
+    total_boxes_after_nms / len(val_samples)
+    if len(val_samples) > 0
+    else 0.0
+)
+
+val_metrics = {
+    "val_mean_iou": mean_iou(sum_iou, total_true_boxes),
+    "val_avg_boxes_before_nms": avg_boxes_before_nms,
+    "val_avg_boxes_after_nms": avg_boxes_after_nms,
+}
+
+wandb_log(pipeline_run, val_metrics)
+finish_wandb(pipeline_run)
+
+print(f'mean_iou = {val_metrics["val_mean_iou"]}')
 test_image_visualize(full_dataset, detector, non_max_suppression, config)
