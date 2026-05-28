@@ -59,14 +59,18 @@ def train(cnn, criterion, device, train_samples, val_samples, config, run=None):
     print("val CNN crops:", len(val_window_dataset))
 
 
-    optimizer = torch.optim.Adam(cnn.parameters(), lr=config["cnn_training"]["learning_rate"])
+    #optimizer = torch.optim.Adam(cnn.parameters(), lr=config["cnn_training"]["learning_rate"])
+    optimizer = torch.optim.Adam(
+        filter(lambda p: p.requires_grad, cnn.parameters()),
+        lr=config["cnn_training"]["learning_rate"]
+    )
     num_epochs = config["cnn_training"]["num_epochs"]
 
     checkpoint_dir = Path("../checkpoints")
     checkpoint_dir.mkdir(exist_ok=True)
 
-    best_checkpoint_path = checkpoint_dir / "baseline_cnn_best.pt"
-    last_checkpoint_path = checkpoint_dir / "baseline_cnn.pt"
+    best_checkpoint_path = checkpoint_dir / "baseline_resnet_best.pt"
+    last_checkpoint_path = checkpoint_dir / "baseline_resnet.pt"
 
     best_val_loss = float("inf")
     best_val_loss_acc = 0.0
@@ -104,13 +108,13 @@ def train(cnn, criterion, device, train_samples, val_samples, config, run=None):
 
             torch.save(cnn.state_dict(), best_checkpoint_path)
 
-            print(
-                f"Epoch {epoch + 1}/{num_epochs} | "
-                f"train loss: {train_loss:.4f} | "
-                f"train acc: {train_acc:.4f} | "
-                f"val loss: {val_loss:.4f} | "
-                f"val acc: {val_acc:.4f}"
-            )
+        print(
+            f"Epoch {epoch + 1}/{num_epochs} | "
+            f"train loss: {train_loss:.4f} | "
+            f"train acc: {train_acc:.4f} | "
+            f"val loss: {val_loss:.4f} | "
+            f"val acc: {val_acc:.4f}"
+        )
 
         if run is not None:
             run.log({
@@ -139,5 +143,5 @@ def train(cnn, criterion, device, train_samples, val_samples, config, run=None):
         log_model_artifact(
             run=run,
             checkpoint_path=best_checkpoint_path,
-            artifact_name="baseline_cnn_best"
+            artifact_name="baseline_resnet_best"
         )

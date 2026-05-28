@@ -10,6 +10,7 @@ from src.detection.bbox_visualization import drew_bbox_and_save, test_image_visu
 from src.config.load_config import load_config
 from src.detection.nms import non_max_suppression
 from src.utils.wandb_utils import init_wandb, wandb_log, finish_wandb
+from src.models.baseline.resnet_classifier import ResNetBinaryClassifier
 torch.manual_seed(42)
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -18,8 +19,8 @@ print("device:", device)
 config = load_config("../src/config/baseline_config.json")
 
 #TRAIN_CNN = config["cnn_training"]["train_cnn"]
-TRAIN_CNN = True
-USE_WANDB_CNN = True
+TRAIN_CNN = False
+USE_WANDB_CNN = False
 USE_WANDB_PIPELINE = False
 
 checkpoint_path = Path(config["cnn_training"]["checkpoint_path"])
@@ -37,7 +38,8 @@ print("train images:", len(train_samples))
 print("val images:", len(val_samples))
 print("test images:", len(test_samples))
 
-cnn = SimpleCNN().to(device)
+#cnn = SimpleCNN().to(device)
+cnn = ResNetBinaryClassifier(pretrained=True).to(device)
 criterion = nn.BCEWithLogitsLoss()
 
 cnn_run = None
@@ -66,24 +68,24 @@ else:
         torch.load(checkpoint_path, map_location=device)
     )
 
-# ## sliding window
+## sliding window
 # pipeline_run = init_wandb(
 #     config=config,
 #     enabled=USE_WANDB_PIPELINE,
 #     project="ena24-baseline",
 #     job_type="pipeline_eval"
 # )
-#
-# cnn.eval()
-# detector = SlidingWindow(
-#     cnn=cnn,
-#     window_sizes=tuple(config["sliding_window"]["window_sizes"]),
-#     overlap_ratio=config["sliding_window"]["overlap_ratio"],
-#     threshold=config["sliding_window"]["threshold"],
-#     crop_size=config["cnn_dataset"]["crop_size"],
-#     device=device,
-# )
-#
+
+cnn.eval()
+detector = SlidingWindow(
+    cnn=cnn,
+    window_sizes=tuple(config["sliding_window"]["window_sizes"]),
+    overlap_ratio=config["sliding_window"]["overlap_ratio"],
+    threshold=config["sliding_window"]["threshold"],
+    crop_size=config["cnn_dataset"]["crop_size"],
+    device=device,
+)
+
 # ## test
 # total_true_boxes = 0
 # sum_iou = 0.0
@@ -165,4 +167,5 @@ else:
 # wandb_log(pipeline_run, val_metrics)
 # finish_wandb(pipeline_run)
 #
-# #test_image_visualize(full_dataset, detector, non_max_suppression, config)
+# print(f'mean_iou = {val_metrics["val_mean_iou"]}')
+test_image_visualize(full_dataset, detector, non_max_suppression, config)

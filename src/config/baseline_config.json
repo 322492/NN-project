@@ -3,7 +3,7 @@
 
   "data": {
     "data_dir": "../data/ena24_sample",
-    "size": 300,
+    "size": 9676,
     "train_ratio": 0.6,
     "val_ratio": 0.2,
     "test_ratio": 0.2
@@ -16,16 +16,17 @@
   },
 
   "cnn_training": {
-    "batch_size": 30,
+    "model": "resnet",
+    "batch_size": 128,
     "learning_rate": 0.001,
-    "num_epochs": 50,
-    "checkpoint_path": "../checkpoints/baseline_cnn_best.pt",
+    "num_epochs": 10,
+    "checkpoint_path": "../checkpoints/baseline_resnet_best.pt",
     "train_cnn": true,
-    "threshold": 0.5
+    "threshold": 0.8
   },
 
   "sliding_window": {
-    "window_sizes": [128, 192, 256],
+    "window_sizes": [192, 256],
     "overlap_ratio": 0.7,
     "threshold": 0.8
   },
