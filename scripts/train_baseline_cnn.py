@@ -9,26 +9,35 @@ from src.models.baseline.cnn_classifier import train_one_epoch, evaluate
 from src.utils.wandb_utils import log_model_artifact
 
 
-def prepare_data_splits(data_dir="../data/ena24_sample", train_ratio=0.6, val_ratio=0.2, seed=42):
+def prepare_data_splits(data_dir="../data/ena24_sample", train_ratio=0.6, val_ratio=0.2, seed=42, size=None):
     torch.manual_seed(seed)
 
     full_dataset = ENA24DetectionDataset(
         data_dir=data_dir,
     )
 
-    train_size = int(train_ratio * len(full_dataset))
-    val_size = int(val_ratio * len(full_dataset))
-    test_size = len(full_dataset) - train_size - val_size
+    generator = torch.Generator().manual_seed(seed)
 
-    train_detection_dataset, val_detection_dataset, test_detection_dataset = random_split(
-        full_dataset,
-        [train_size, val_size, test_size],
-        generator=torch.Generator().manual_seed(42),
-    )
+    indices = torch.randperm(
+        len(full_dataset),
+        generator=generator,
+    ).tolist()
 
-    train_samples = [full_dataset.samples[i] for i in train_detection_dataset.indices]
-    val_samples = [full_dataset.samples[i] for i in val_detection_dataset.indices]
-    test_samples = [full_dataset.samples[i] for i in test_detection_dataset.indices]
+    if size is not None:
+        size = min(size, len(indices))
+        indices = indices[:size]
+
+    train_size = int(train_ratio * len(indices))
+    val_size = int(val_ratio * len(indices))
+    test_size = len(indices) - train_size - val_size
+
+    train_indices = indices[:train_size]
+    val_indices = indices[train_size:train_size + val_size]
+    test_indices = indices[train_size + val_size:]
+
+    train_samples = [full_dataset.samples[i] for i in train_indices]
+    val_samples = [full_dataset.samples[i] for i in val_indices]
+    test_samples = [full_dataset.samples[i] for i in test_indices]
 
     return full_dataset, train_samples, val_samples, test_samples
 
@@ -50,27 +59,47 @@ def train(cnn, criterion, device, train_samples, val_samples, config, run=None):
 
     batch_size = config["cnn_training"].get("batch_size", 32)
 
-    train_window_loader = DataLoader(train_window_dataset, batch_size=batch_size, shuffle=True)
-    val_window_loader = DataLoader(val_window_dataset, batch_size=batch_size, shuffle=False)
+    train_window_loader = DataLoader(
+        train_window_dataset,
+        batch_size=batch_size,
+        shuffle=True,
+    )
+
+    val_window_loader = DataLoader(
+        val_window_dataset,
+        batch_size=batch_size,
+        shuffle=False,
+    )
 
     print("train images:", len(train_samples))
     print("val images:", len(val_samples))
     print("train CNN crops:", len(train_window_dataset))
     print("val CNN crops:", len(val_window_dataset))
 
-
-    #optimizer = torch.optim.Adam(cnn.parameters(), lr=config["cnn_training"]["learning_rate"])
     optimizer = torch.optim.Adam(
         filter(lambda p: p.requires_grad, cnn.parameters()),
-        lr=config["cnn_training"]["learning_rate"]
+        lr=config["cnn_training"]["learning_rate"],
     )
+
     num_epochs = config["cnn_training"]["num_epochs"]
+    threshold = config["cnn_training"]["threshold"]
 
-    checkpoint_dir = Path("../checkpoints")
-    checkpoint_dir.mkdir(exist_ok=True)
+    last_checkpoint_path = Path(
+        config["cnn_training"].get(
+            "checkpoint_path",
+            "../checkpoints/baseline_resnet.pt",
+        )
+    )
 
-    best_checkpoint_path = checkpoint_dir / "baseline_resnet_best.pt"
-    last_checkpoint_path = checkpoint_dir / "baseline_resnet.pt"
+    best_checkpoint_path = Path(
+        config["cnn_training"].get(
+            "best_checkpoint_path",
+            str(last_checkpoint_path.with_name(last_checkpoint_path.stem + "_best" + last_checkpoint_path.suffix)),
+        )
+    )
+
+    last_checkpoint_path.parent.mkdir(parents=True, exist_ok=True)
+    best_checkpoint_path.parent.mkdir(parents=True, exist_ok=True)
 
     best_val_loss = float("inf")
     best_val_loss_acc = 0.0
@@ -79,6 +108,9 @@ def train(cnn, criterion, device, train_samples, val_samples, config, run=None):
     best_val_acc = 0.0
     best_val_acc_epoch = 0
 
+    final_val_loss = None
+    final_val_acc = None
+
     for epoch in range(num_epochs):
         train_loss, train_acc = train_one_epoch(
             cnn,
@@ -86,7 +118,7 @@ def train(cnn, criterion, device, train_samples, val_samples, config, run=None):
             optimizer,
             criterion,
             device,
-            threshold=config["cnn_training"]["threshold"]
+            threshold=threshold,
         )
 
         val_loss, val_acc = evaluate(
@@ -94,8 +126,11 @@ def train(cnn, criterion, device, train_samples, val_samples, config, run=None):
             val_window_loader,
             criterion,
             device,
-            threshold=config["cnn_training"]["threshold"]
+            threshold=threshold,
         )
+
+        final_val_loss = val_loss
+        final_val_acc = val_acc
 
         if val_acc > best_val_acc:
             best_val_acc = val_acc
@@ -126,8 +161,9 @@ def train(cnn, criterion, device, train_samples, val_samples, config, run=None):
             })
 
     torch.save(cnn.state_dict(), last_checkpoint_path)
-    print("Saved last checkpoint:", last_checkpoint_path)
-    print("Best checkpoint:", best_checkpoint_path)
+
+    print(f"Saved last checkpoint: {last_checkpoint_path}")
+    print(f"Saved best checkpoint: {best_checkpoint_path}")
 
     if run is not None:
         run.summary["cnn_best_val_loss"] = best_val_loss
@@ -137,11 +173,11 @@ def train(cnn, criterion, device, train_samples, val_samples, config, run=None):
         run.summary["cnn_best_val_acc"] = best_val_acc
         run.summary["cnn_best_val_acc_epoch"] = best_val_acc_epoch
 
-        run.summary["cnn_final_val_loss"] = val_loss
-        run.summary["cnn_final_val_acc"] = val_acc
+        run.summary["cnn_final_val_loss"] = final_val_loss
+        run.summary["cnn_final_val_acc"] = final_val_acc
 
         log_model_artifact(
             run=run,
             checkpoint_path=best_checkpoint_path,
-            artifact_name="baseline_resnet_best"
+            artifact_name="baseline_resnet_best",
         )

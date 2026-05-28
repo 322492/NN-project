@@ -22,29 +22,42 @@ config = load_config("../src/config/baseline_config.json")
 #TRAIN_CNN = config["cnn_training"]["train_cnn"]
 TRAIN_CNN = False
 USE_WANDB_CNN = False
-USE_WANDB_PIPELINE = False
+USE_WANDB_PIPELINE = True
 
-checkpoint_path = Path(config["cnn_training"]["checkpoint_path"])
+last_checkpoint_path = Path(config["cnn_training"]["checkpoint_path"])
+best_checkpoint_path = Path(config["cnn_training"]["best_checkpoint_path"])
 
+checkpoint_path = best_checkpoint_path
 
 full_dataset, train_samples, val_samples, test_samples = prepare_data_splits(
     data_dir=config["data"]["data_dir"],
     train_ratio=config["data"]["train_ratio"],
     val_ratio=config["data"]["val_ratio"],
-    seed=config["seed"]
+    seed=config["seed"],
+    size=config["data"].get("size"),
 )
 
-print("full images:", len(full_dataset))
+print("full dataset images:", len(full_dataset))
+print("used images:", len(train_samples) + len(val_samples) + len(test_samples))
 print("train images:", len(train_samples))
 print("val images:", len(val_samples))
 print("test images:", len(test_samples))
 
-#cnn = SimpleCNN().to(device)
-cnn = ResNetBinaryClassifier(pretrained=True).to(device)
+model_name = config["cnn_training"].get("model", "simple_cnn")
+
+if model_name == "resnet":
+    cnn = ResNetBinaryClassifier(pretrained=True).to(device)
+elif model_name == "simple_cnn":
+    cnn = SimpleCNN().to(device)
+else:
+    raise ValueError(f"Unknown model: {model_name}")
+
 criterion = nn.BCEWithLogitsLoss()
 
 cnn_run = None
 if TRAIN_CNN or not checkpoint_path.exists():
+    USE_WANDB_CNN = True
+
     cnn_run = init_wandb(
         config=config,
         enabled=USE_WANDB_CNN,
@@ -63,11 +76,14 @@ if TRAIN_CNN or not checkpoint_path.exists():
     )
     finish_wandb(cnn_run)
 
-else:
-    print(f"Loading checkpoint: {checkpoint_path}")
-    cnn.load_state_dict(
-        torch.load(checkpoint_path, map_location=device)
-    )
+    if not checkpoint_path.exists():
+        raise FileNotFoundError(f"Best checkpoint was not created: {checkpoint_path}")
+
+
+print(f"Loading checkpoint: {checkpoint_path}")
+cnn.load_state_dict(
+    torch.load(checkpoint_path, map_location=device)
+)
 
 ## sliding window
 pipeline_run = init_wandb(
