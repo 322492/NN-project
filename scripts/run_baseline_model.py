@@ -12,6 +12,7 @@ from src.detection.nms import non_max_suppression
 from src.detection.detection_metrics import evaluate_detections
 from src.utils.wandb_utils import init_wandb, wandb_log, finish_wandb
 from src.models.baseline.resnet_classifier import ResNetBinaryClassifier
+
 torch.manual_seed(42)
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -184,11 +185,26 @@ avg_boxes_before_nms = (
     if len(val_samples) > 0
     else 0.0
 )
+metrics = evaluate_detections(
+    pred_boxes=boxes,
+    pred_scores=confidence_scores,
+    true_boxes=true_bboxes,
+    iou_threshold=config["metrics"]["iou_threshold"],
+)
 
 avg_boxes_after_nms = (
     total_boxes_after_nms / len(val_samples)
     if len(val_samples) > 0
     else 0.0
+)
+print(
+    "metrics:",
+    "TP =", metrics["tp"],
+    "FP =", metrics["fp"],
+    "FN =", metrics["fn"],
+    "precision =", f"{metrics['precision']:.4f}",
+    "recall =", f"{metrics['recall']:.4f}",
+    "f1 =", f"{metrics['f1']:.4f}",
 )
 
 val_metrics = {

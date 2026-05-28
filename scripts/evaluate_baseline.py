@@ -27,6 +27,7 @@ EVALUATION_SPLIT = "test"
 
 checkpoint_path = Path(config["cnn_training"]["best_checkpoint_path"])
 
+
 full_dataset, train_samples, val_samples, test_samples = prepare_data_splits(
     data_dir=config["data"]["data_dir"],
     train_ratio=config["data"]["train_ratio"],
@@ -147,7 +148,6 @@ precision, recall, f1 = calculate_precision_recall_f1(
     total_fp,
     total_fn,
 )
-
 
 avg_boxes_before_nms = (
     total_boxes_before_nms / len(evaluation_samples)
