@@ -5,7 +5,11 @@ from torch import nn
 
 from scripts.train_baseline_cnn import train, prepare_data_splits
 from src.config.load_config import load_config
-from src.detection.detection_metrics import calculate_precision_recall_f1, evaluate_detections
+from src.detection.detection_metrics import (
+    calculate_map,
+    calculate_precision_recall_f1,
+    evaluate_detections,
+)
 from src.detection.nms import non_max_suppression
 from src.models.baseline.cnn_classifier import SimpleCNN
 from src.models.baseline.sliding_window_detection import SlidingWindow
@@ -89,6 +93,10 @@ sum_iou = 0.0
 total_boxes_before_nms = 0
 total_boxes_after_nms = 0
 
+all_pred_boxes = []
+all_pred_scores = []
+all_true_boxes = []
+
 for idx, sample in enumerate(evaluation_samples):
     image_path = sample["image_path"]
     true_bboxes = sample["bboxes"]
@@ -115,6 +123,10 @@ for idx, sample in enumerate(evaluation_samples):
 
     total_boxes_before_nms += boxes_before_nms
     total_boxes_after_nms += len(boxes)
+
+    all_pred_boxes.append(boxes)
+    all_pred_scores.append(scores)
+    all_true_boxes.append(true_bboxes)
 
     matches = match_true_boxes_with_predictions(
         true_bboxes=true_bboxes,
@@ -162,6 +174,12 @@ avg_boxes_after_nms = (
 )
 
 mean_iou_value = mean_iou(sum_iou, total_true_boxes)
+map_score = calculate_map(
+    all_pred_boxes,
+    all_pred_scores,
+    all_true_boxes,
+    iou_threshold=config["metrics"]["iou_threshold"],
+)
 
 print()
 print("SUMMARY")
@@ -174,6 +192,7 @@ print("FN:", total_fn)
 print("precision:", f"{precision:.4f}")
 print("recall:", f"{recall:.4f}")
 print("f1:", f"{f1:.4f}")
+print("mAP:", f"{map_score:.4f}")
 print("mean_iou:", f"{mean_iou_value:.4f}")
 print("avg boxes before NMS:", f"{avg_boxes_before_nms:.4f}")
 print("avg boxes after NMS:", f"{avg_boxes_after_nms:.4f}")

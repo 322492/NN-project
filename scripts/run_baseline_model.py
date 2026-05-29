@@ -9,7 +9,7 @@ from scripts.train_baseline_cnn import train, prepare_data_splits
 from src.detection.bbox_visualization import drew_bbox_and_save, test_image_visualize
 from src.config.load_config import load_config
 from src.detection.nms import non_max_suppression
-from src.detection.detection_metrics import evaluate_detections
+from src.detection.detection_metrics import calculate_map, evaluate_detections
 from src.utils.wandb_utils import init_wandb, wandb_log, finish_wandb
 from src.models.baseline.resnet_classifier import ResNetBinaryClassifier
 
@@ -21,7 +21,7 @@ print("device:", device)
 config = load_config("../src/config/baseline_config.json")
 
 #TRAIN_CNN = config["cnn_training"]["train_cnn"]
-TRAIN_CNN = False
+TRAIN_CNN = True
 USE_WANDB_CNN = False
 USE_WANDB_PIPELINE = True
 
@@ -111,6 +111,10 @@ sum_iou = 0.0
 total_boxes_before_nms = 0
 total_boxes_after_nms = 0
 
+all_pred_boxes = []
+all_pred_scores = []
+all_true_boxes = []
+
 for idx, sample in enumerate(val_samples):
     image_path = sample["image_path"]
     true_bboxes = sample["bboxes"]
@@ -134,6 +138,10 @@ for idx, sample in enumerate(val_samples):
 
     total_boxes_before_nms += boxes_before_nms
     total_boxes_after_nms += len(boxes)
+
+    all_pred_boxes.append(boxes)
+    all_pred_scores.append(confidence_scores)
+    all_true_boxes.append(true_bboxes)
 
     print(f"{idx}/{len(val_samples)}")
     #print("image:", image_path)
@@ -207,8 +215,16 @@ print(
     "f1 =", f"{metrics['f1']:.4f}",
 )
 
+map_score = calculate_map(
+    all_pred_boxes,
+    all_pred_scores,
+    all_true_boxes,
+    iou_threshold=config["metrics"]["iou_threshold"],
+)
+
 val_metrics = {
     "val_mean_iou": mean_iou(sum_iou, total_true_boxes),
+    "val_map": map_score,
     "val_avg_boxes_before_nms": avg_boxes_before_nms,
     "val_avg_boxes_after_nms": avg_boxes_after_nms,
 }
@@ -217,4 +233,5 @@ wandb_log(pipeline_run, val_metrics)
 finish_wandb(pipeline_run)
 
 print(f'mean_iou = {val_metrics["val_mean_iou"]}')
+print(f'mAP = {map_score:.4f}')
 test_image_visualize(full_dataset, detector, non_max_suppression, config)
