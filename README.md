@@ -146,8 +146,50 @@ python scripts/prepare_yolo_dataset.py --config_path src/config/yolo_config_full
 python scripts/prepare_yolo_dataset.py --config_path src/config/yolo_config_full.json --copy_images
 ```
 
-Training (`scripts/train_yolo.py`, step D1) will use the same config files.
+Re-run prepare after changing label logic so all boxes use class `0` only.
 
-Re-run after changing prep logic so `data.yaml` and label `.txt` files use class `0` only.
+Output: `data/ena24_yolo/data.yaml` and `split_summary.json` in the output folder.
 
-Output: `data/ena24_yolo/data.yaml` (paths for `yolo train`). See `split_summary.json` in the output folder for counts.
+### Training
+
+Requires [Ultralytics](https://github.com/ultralytics/ultralytics): `pip install ultralytics`
+
+Run from the **project root** (with venv activated). Step 1 prepares labels if needed; step 2 trains and copies `best.pt` to the checkpoint path in config.
+
+**Sample (default — quick dev)**
+
+```bash
+# 1) Prepare YOLO folders + data.yaml (skip if already done)
+python scripts/prepare_yolo_dataset.py --config_path src/config/yolo_config.json
+
+# 2) Train YOLOv8n (single-class, ~20 images from config)
+python scripts/train_yolo.py --config_path src/config/yolo_config.json
+
+# Or combine: prepare + train in one command
+python scripts/train_yolo.py --config_path src/config/yolo_config.json --prepare
+```
+
+Checkpoint: `checkpoints/yolo_best.pt`  
+Ultralytics logs: `runs/detect/ena24_yolo_sample/`
+
+**Full ENA24** — switch config only (same script):
+
+```bash
+python scripts/prepare_yolo_dataset.py --config_path src/config/yolo_config_full.json
+python scripts/train_yolo.py --config_path src/config/yolo_config_full.json
+```
+
+On Windows, if image symlinks fail during prepare, add `--copy_images` to both commands.
+
+**Useful options**
+
+```bash
+# Shorter smoke train
+python scripts/train_yolo.py --config_path src/config/yolo_config.json --epochs 5
+
+# Resume an interrupted run
+python scripts/train_yolo.py --config_path src/config/yolo_config.json \
+  --resume runs/detect/ena24_yolo_sample/weights/last.pt
+```
+
+Edit `epochs`, `batch`, `imgsz`, or `model.weights` in `src/config/yolo_config.json` / `yolo_config_full.json` without changing the script.
