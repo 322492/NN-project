@@ -1,0 +1,50 @@
+{
+  "seed": 42,
+  "description": "Baseline ResNet + sliding window on full ENA24 (~8789 images). Omit data.size to use all images.",
+
+  "data": {
+    "data_dir": "../data/ena24_full",
+    "train_ratio": 0.6,
+    "val_ratio": 0.2,
+    "test_ratio": 0.2
+  },
+
+  "cnn_dataset": {
+    "crop_size": 128,
+    "negative_per_positive": 3,
+    "negative_iou_threshold": 0.2
+  },
+
+  "cnn_training": {
+    "model": "resnet",
+    "batch_size": 128,
+    "learning_rate": 0.001,
+    "num_epochs": 10,
+    "checkpoint_path": "../checkpoints/baseline_resnet_full.pt",
+    "best_checkpoint_path": "../checkpoints/baseline_resnet_full_best.pt",
+    "train_cnn": true,
+    "threshold": 0.8
+  },
+
+  "sliding_window": {
+    "window_sizes": [192, 256],
+    "overlap_ratio": 0.7,
+    "threshold": 0.7
+  },
+
+  "nms": {
+    "iou_threshold": 0.3
+  },
+
+  "metrics": {
+    "iou_threshold": 0.5
+  },
+
+  "outputs": {
+    "result_image_path": "../src/detection/outputs/result_{}.jpg"
+  },
+
+  "lightning": {
+    "monitor": "cnn_val_loss"
+  }
+}

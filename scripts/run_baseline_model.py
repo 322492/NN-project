@@ -1,13 +1,20 @@
+import sys
 from pathlib import Path
+
 import torch
 from torch import nn
 
-from src.detection.IoU import max_iou_with_true_boxes, match_true_boxes_with_predictions, mean_iou
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+from src.detection.IoU import match_true_boxes_with_predictions, mean_iou
 from src.models.baseline.cnn_classifier import SimpleCNN
 from src.models.baseline.sliding_window_detection import SlidingWindow
 from scripts.train_baseline_cnn import train, prepare_data_splits
 from src.detection.bbox_visualization import drew_bbox_and_save, test_image_visualize
 from src.config.load_config import load_config
+from src.config.paths import normalize_config_paths
 from src.detection.nms import non_max_suppression
 from src.detection.detection_metrics import calculate_map, evaluate_detections
 from src.utils.wandb_utils import init_wandb, wandb_log, finish_wandb
@@ -18,10 +25,10 @@ torch.manual_seed(42)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print("device:", device)
 
-config = load_config("../src/config/baseline_config.json")
+config = load_config(PROJECT_ROOT / "src" / "config" / "baseline_config.json")
+config = normalize_config_paths(config)
 
-#TRAIN_CNN = config["cnn_training"]["train_cnn"]
-TRAIN_CNN = True
+TRAIN_CNN = config["cnn_training"].get("train_cnn", False)
 USE_WANDB_CNN = False
 USE_WANDB_PIPELINE = True
 

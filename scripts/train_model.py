@@ -14,54 +14,11 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from src.config.load_config import load_config
+from src.config.paths import normalize_config_paths
 from src.datasets.ena24_baseline_datamodule import ENA24BaselineDataModule
 from src.models.baseline.cnn_classifier import SimpleCNN
 from src.models.baseline.resnet_classifier import ResNetBinaryClassifier
 from src.models.baseline.lightning_sliding_window_detector import LitSlidingWindowCNNDetector
-
-
-def resolve_project_path(path_value: str | Path) -> Path:
-    path = Path(path_value)
-
-    if path.is_absolute():
-        return path
-
-    # Stary styl: ścieżka liczona tak, jakby skrypt był odpalany z scripts/
-    scripts_relative = (PROJECT_ROOT / "scripts" / path).resolve()
-
-    # Nowy styl: ścieżka liczona od katalogu projektu
-    project_relative = (PROJECT_ROOT / path).resolve()
-
-    if scripts_relative.exists():
-        return scripts_relative
-
-    if project_relative.exists():
-        return project_relative
-
-    # Dla plików wyjściowych, np. checkpoints, których jeszcze nie ma.
-    if str(path).startswith(".."):
-        return scripts_relative
-
-    return project_relative
-
-
-def normalize_config_paths(config: dict) -> dict:
-
-    if "data" in config and "data_dir" in config["data"]:
-        config["data"]["data_dir"] = str(resolve_project_path(config["data"]["data_dir"]))
-
-    if "cnn_training" in config:
-        if "checkpoint_path" in config["cnn_training"]:
-            config["cnn_training"]["checkpoint_path"] = str(
-                resolve_project_path(config["cnn_training"]["checkpoint_path"])
-            )
-
-        if "best_checkpoint_path" in config["cnn_training"]:
-            config["cnn_training"]["best_checkpoint_path"] = str(
-                resolve_project_path(config["cnn_training"]["best_checkpoint_path"])
-            )
-
-    return config
 
 
 def build_cnn(config: dict):
@@ -161,9 +118,12 @@ def main(
         filename="baseline-cnn-{epoch:02d}-{" + monitor_metric + ":.4f}",
     )
 
+    accelerator = "cuda" if torch.cuda.is_available() else "cpu"
+    print("Accelerator:", accelerator)
+
     trainer = L.Trainer(
         max_epochs=max_epochs or config["cnn_training"]["num_epochs"],
-        accelerator="cpu",
+        accelerator=accelerator,
         devices=1,
         default_root_dir=str(log_dir),
         callbacks=[checkpoint_callback],

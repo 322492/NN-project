@@ -47,3 +47,59 @@ python scripts/prepare_ena24_sample.py
 - The full dataset is **not required initially**.
 - If you prefer, you can download ENA24 manually once and then use `--data_dir` to prepare the sample locally.
 - If your local ENA24 directory structure differs from the expected layout, update the path resolution logic in `scripts/prepare_ena24_sample.py`.
+
+## Baseline pipeline (ResNet + sliding window)
+
+Binary window classifier → sliding window → NMS → detection metrics (P/R/F1, mAP).
+
+**Configs**
+
+| File | Data | Use case |
+|------|------|----------|
+| `src/config/baseline_config.json` | `data/ena24_sample` (20 images) | Quick dev |
+| `src/config/baseline_config_full.json` | `data/ena24_full` (~8789 images) | Full baseline |
+
+**Prerequisites**
+
+- Activate the project venv and install dependencies (`torch`, `lightning`, `click`, etc.).
+- Dataset layout: `data/<set>/images/` + `annotations.json` (COCO-style).
+- Run commands from the **project root**.
+
+**1. Train** (PyTorch Lightning; exports `checkpoints/baseline_resnet*_best.pt`)
+
+```bash
+# sample
+python scripts/train_model.py --config_path src/config/baseline_config.json
+
+# full
+python scripts/train_model.py --config_path src/config/baseline_config_full.json
+```
+
+Uses GPU when CUDA is available. Training on the full set can take a long time.
+
+**2. Evaluate** (loads best checkpoint; no training)
+
+```bash
+# sample — test split
+python scripts/evaluate_baseline.py --config_path src/config/baseline_config.json --split test
+
+# full — test split
+python scripts/evaluate_baseline.py --config_path src/config/baseline_config_full.json --split test
+```
+
+Use `--split val` for the validation split. Metrics are printed in a `SUMMARY` block at the end.
+
+**3. Legacy script** (optional: train + val eval + W&B + one visualization)
+
+```bash
+python scripts/run_baseline_model.py
+```
+
+Uses `baseline_config.json` only. Training runs when `cnn_training.train_cnn` is `true` in the config (set to `false` to evaluate an existing checkpoint only).
+
+**Checkpoints**
+
+- Sample: `checkpoints/baseline_resnet_best.pt`
+- Full: `checkpoints/baseline_resnet_full_best.pt`
+
+Sliding-window evaluation on the full test split (~1758 images) is slow on CPU; prefer GPU or a smaller config for smoke tests.
