@@ -193,3 +193,22 @@ python scripts/train_yolo.py --config_path src/config/yolo_config.json \
 ```
 
 Edit `epochs`, `batch`, `imgsz`, or `model.weights` in `src/config/yolo_config.json` / `yolo_config_full.json` without changing the script.
+
+### Evaluation
+
+Same **test/val split** as the baseline (`coco_dir`, `seed`, `size`, ratios from the YOLO config). Metrics: precision, recall, F1, mAP, mean IoU — class-agnostic, comparable to `evaluate_baseline.py`.
+
+```bash
+# sample — test split (after training)
+python scripts/evaluate_yolo.py --config_path src/config/yolo_config.json --split test
+
+# save JSON for comparison tables
+python scripts/evaluate_yolo.py --config_path src/config/yolo_config.json --split test \
+  --output_json results/yolo_sample_test.json
+
+# full
+python scripts/evaluate_yolo.py --config_path src/config/yolo_config_full.json --split test \
+  --output_json results/yolo_full_test.json
+```
+
+Use the **same** `yolo_config.json` / `yolo_config_full.json` as for prepare and train so the split matches the baseline run on the same config's `coco_dir` and `size`.
