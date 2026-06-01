@@ -1,6 +1,20 @@
 # NN-project
 Project for the course "Neural Networks. Theory and Practice" in the spring semester of the academic year 2025/26.
 
+## Project scope (important)
+
+**Current goal: predict bounding boxes only — not animal species or other class labels.**
+
+ENA24 COCO annotations include many species categories, but this project deliberately treats detection as a **single-class** problem: “is there an object in this region?” Models are trained and evaluated on **box localization** (IoU, precision, recall, F1, mAP). Matching predictions to ground truth does **not** require the predicted class to match the species.
+
+| Component | How this assumption is applied |
+|-----------|------------------------------|
+| **Baseline** | Binary window classifier (object vs background) + sliding window + NMS |
+| **YOLO** | `prepare_yolo_dataset.py` writes all boxes as class `0` (`nc: 1`, name `object`); COCO `category_id` is ignored unless you pass `--multi_class` |
+| **Metrics** | Shared detection metrics in `src/detection/detection_metrics.py` — class-agnostic matching by IoU |
+
+Species-level classification may be added later as a separate step; it is **out of scope** for the current baseline and YOLO experiments unless explicitly enabled.
+
 ## Dataset: ENA24
 
 The project uses the **ENA24-detection** dataset for object detection in camera trap images.
@@ -50,7 +64,7 @@ python scripts/prepare_ena24_sample.py
 
 ## Baseline pipeline (ResNet + sliding window)
 
-Binary window classifier → sliding window → NMS → detection metrics (P/R/F1, mAP).
+Binary window classifier → sliding window → NMS → detection metrics (P/R/F1, mAP). See [Project scope](#project-scope-important) — no per-species labels.
 
 **Configs**
 
@@ -103,3 +117,37 @@ Uses `baseline_config.json` only. Training runs when `cnn_training.train_cnn` is
 - Full: `checkpoints/baseline_resnet_full_best.pt`
 
 Sliding-window evaluation on the full test split (~1758 images) is slow on CPU; prefer GPU or a smaller config for smoke tests.
+
+## YOLO
+
+**Configs**
+
+| File | COCO source | YOLO output | Training |
+|------|-------------|-------------|----------|
+| `src/config/yolo_config.json` | `data/ena24_sample` (`size: 20`) | `data/ena24_yolo` | 30 epochs, `yolov8n` |
+| `src/config/yolo_config_full.json` | `data/ena24_full` | `data/ena24_yolo_full` | 50 epochs, `yolov8n` |
+
+Shared settings: single-class (`object`), `metrics.iou_threshold: 0.5` (aligned with baseline). Checkpoints: `checkpoints/yolo_best.pt` / `yolo_full_best.pt`.
+
+### Dataset preparation
+
+Convert ENA24 COCO annotations to Ultralytics layout (`images/`, `labels/`, `data.yaml`). Uses the **same train/val/test split** as the baseline (`seed` + ratios).
+
+Aligned with [Project scope](#project-scope-important): **single-class by default** (`nc: 1`, name `object`). Use `--multi_class` only if you explicitly switch to per-species detection.
+
+```bash
+# sample
+python scripts/prepare_yolo_dataset.py --config_path src/config/yolo_config.json
+
+# full ENA24
+python scripts/prepare_yolo_dataset.py --config_path src/config/yolo_config_full.json
+
+# if symlinks fail on Windows, copy images instead
+python scripts/prepare_yolo_dataset.py --config_path src/config/yolo_config_full.json --copy_images
+```
+
+Training (`scripts/train_yolo.py`, step D1) will use the same config files.
+
+Re-run after changing prep logic so `data.yaml` and label `.txt` files use class `0` only.
+
+Output: `data/ena24_yolo/data.yaml` (paths for `yolo train`). See `split_summary.json` in the output folder for counts.

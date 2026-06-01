@@ -1,0 +1,48 @@
+{
+  "seed": 42,
+  "description": "YOLOv8 single-class detection on ENA24 sample. Boxes only (nc=1). Same split as baseline when seed and ratios match.",
+
+  "detection": {
+    "single_class": true,
+    "class_name": "object"
+  },
+
+  "data": {
+    "coco_dir": "../data/ena24_sample",
+    "output_dir": "../data/ena24_yolo",
+    "size": 20,
+    "train_ratio": 0.6,
+    "val_ratio": 0.2,
+    "test_ratio": 0.2,
+    "copy_images": false
+  },
+
+  "model": {
+    "weights": "yolov8n.pt"
+  },
+
+  "training": {
+    "epochs": 30,
+    "imgsz": 640,
+    "batch": 16,
+    "device": "auto",
+    "patience": 10,
+    "project": "../runs/detect",
+    "name": "ena24_yolo_sample",
+    "workers": 4,
+    "pretrained": true
+  },
+
+  "inference": {
+    "conf_threshold": 0.25,
+    "iou_threshold": 0.45
+  },
+
+  "metrics": {
+    "iou_threshold": 0.5
+  },
+
+  "checkpoints": {
+    "best_checkpoint_path": "../checkpoints/yolo_best.pt"
+  }
+}
