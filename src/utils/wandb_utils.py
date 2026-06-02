@@ -21,7 +21,14 @@ def wandb_log(run, metrics):
     if run is None:
         return
 
-    run.log(metrics)
+    numeric_metrics = {
+        key: value
+        for key, value in metrics.items()
+        if isinstance(value, (int, float, bool))
+    }
+
+    if numeric_metrics:
+        run.log(numeric_metrics)
 
     for key, value in metrics.items():
         run.summary[key] = value

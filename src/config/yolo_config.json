@@ -10,7 +10,7 @@
   "data": {
     "coco_dir": "../data/ena24_sample",
     "output_dir": "../data/ena24_yolo",
-    "size": 20,
+    "size": 60,
     "train_ratio": 0.6,
     "val_ratio": 0.2,
     "test_ratio": 0.2,
@@ -22,7 +22,7 @@
   },
 
   "training": {
-    "epochs": 30,
+    "epochs": 10,
     "imgsz": 640,
     "batch": 16,
     "device": "auto",
@@ -34,7 +34,7 @@
   },
 
   "inference": {
-    "conf_threshold": 0.25,
+    "conf_threshold": 0.02,
     "iou_threshold": 0.45
   },
 
@@ -44,5 +44,10 @@
 
   "checkpoints": {
     "best_checkpoint_path": "../checkpoints/yolo_best.pt"
+  },
+
+  "wandb": {
+    "enabled": true,
+    "project": "ena24-yolo-detector-v2"
   }
 }

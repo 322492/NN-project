@@ -8,7 +8,7 @@
   },
 
   "data": {
-    "coco_dir": "../data/ena24_full",
+    "coco_dir": "../data/ena24_sample",
     "output_dir": "../data/ena24_yolo_full",
     "size": null,
     "train_ratio": 0.6,
@@ -22,7 +22,7 @@
   },
 
   "training": {
-    "epochs": 50,
+    "epochs": 20,
     "imgsz": 640,
     "batch": 16,
     "device": "auto",
@@ -44,5 +44,11 @@
 
   "checkpoints": {
     "best_checkpoint_path": "../checkpoints/yolo_full_best.pt"
+  },
+
+
+  "wandb": {
+    "enabled": true,
+    "project": "ena24-yolo-detector-v2"
   }
 }

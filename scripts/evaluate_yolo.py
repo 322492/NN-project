@@ -14,7 +14,6 @@ import json
 import sys
 from datetime import datetime
 from pathlib import Path
-
 import click
 import torch
 
@@ -31,7 +30,12 @@ from src.detection.detection_metrics import (
     evaluate_detections,
 )
 from src.detection.IoU import match_true_boxes_with_predictions, mean_iou
-
+from src.utils.wandb_utils import (
+    wandb_log,
+    finish_wandb,
+    init_wandb,
+    log_model_artifact,
+)
 
 def resolve_inference_device(device_setting: str):
     if device_setting != "auto":
@@ -293,6 +297,18 @@ def main(
         evaluation_split=evaluation_split,
         checkpoint_path=checkpoint_path,
     )
+
+    wandb_cfg = config.get("wandb", {})
+
+    run = init_wandb(
+        config=config,
+        enabled=wandb_cfg.get("enabled", False),
+        project=wandb_cfg.get("project", "ena24-yolo"),
+        job_type="eval",
+    )
+
+    wandb_log(run, summary)
+    finish_wandb(run)
 
     if output_json is not None:
         save_summary_json(summary, resolve_project_path(output_json))
