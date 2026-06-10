@@ -9,7 +9,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from scripts.train_baseline_cnn import prepare_data_splits
+from src.datasets.data_splits import prepare_data_splits_from_data_config
 from src.config.load_config import load_config
 from src.config.paths import normalize_config_paths
 from src.detection.detection_metrics import (
@@ -41,12 +41,10 @@ def run_evaluation(config: dict, evaluation_split: str) -> dict:
 
     checkpoint_path = Path(config["cnn_training"]["best_checkpoint_path"])
 
-    full_dataset, train_samples, val_samples, test_samples = prepare_data_splits(
+    full_dataset, train_samples, val_samples, test_samples = prepare_data_splits_from_data_config(
+        config["data"],
         data_dir=config["data"]["data_dir"],
-        train_ratio=config["data"]["train_ratio"],
-        val_ratio=config["data"]["val_ratio"],
         seed=seed,
-        size=config["data"].get("size"),
     )
 
     if evaluation_split == "val":

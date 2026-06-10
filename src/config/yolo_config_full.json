@@ -8,13 +8,16 @@
   },
 
   "data": {
-    "coco_dir": "../data/ena24_sample",
+    "coco_dir": "../data/ena24_full",
     "output_dir": "../data/ena24_yolo_full",
     "size": null,
     "train_ratio": 0.6,
     "val_ratio": 0.2,
     "test_ratio": 0.2,
-    "copy_images": false
+    "copy_images": false,
+    "split_strategy": "manifest",
+    "split_manifest_path": "../data/ena24_full/metadata/split_manifest.json",
+    "group_manifest_path": "../data/ena24_full/metadata/group_manifest.json"
   },
 
   "model": {

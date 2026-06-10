@@ -27,7 +27,7 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from src.config.load_config import load_config
 from src.config.paths import normalize_config_paths, resolve_project_path
-from src.datasets.data_splits import prepare_data_splits
+from src.datasets.data_splits import prepare_data_splits, split_kwargs_from_data_config
 
 SINGLE_CLASS_ID = 0
 
@@ -194,6 +194,9 @@ def prepare_yolo_dataset(
     copy_images: bool = False,
     single_class: bool = True,
     class_name: str = "object",
+    split_strategy: str = "random",
+    split_manifest_path: str | Path | None = None,
+    group_manifest_path: str | Path | None = None,
 ) -> dict:
     coco_dir = Path(coco_dir)
     output_dir = Path(output_dir)
@@ -226,6 +229,13 @@ def prepare_yolo_dataset(
         val_ratio=val_ratio,
         seed=seed,
         size=size,
+        **split_kwargs_from_data_config(
+            {
+                "split_strategy": split_strategy,
+                "split_manifest_path": split_manifest_path,
+                "group_manifest_path": group_manifest_path,
+            }
+        ),
     )
 
     train_count = export_split(
@@ -248,6 +258,9 @@ def prepare_yolo_dataset(
         "size": size,
         "train_ratio": train_ratio,
         "val_ratio": val_ratio,
+        "split_strategy": split_strategy,
+        "split_manifest_path": str(split_manifest_path) if split_manifest_path else None,
+        "group_manifest_path": str(group_manifest_path) if group_manifest_path else None,
         "single_class": single_class,
         "num_classes": len(class_names),
         "class_names": class_names,
@@ -325,6 +338,8 @@ def main(
     resolved_copy_images = copy_images or bool(data_cfg.get("copy_images", False))
     print("Copy images:", resolved_copy_images)
 
+    split_kwargs = split_kwargs_from_data_config(data_cfg)
+
     summary = prepare_yolo_dataset(
         coco_dir=resolved_coco_dir,
         output_dir=resolved_output_dir,
@@ -335,6 +350,7 @@ def main(
         copy_images=resolved_copy_images,
         single_class=single_class,
         class_name=class_name,
+        **split_kwargs,
     )
 
     print()
