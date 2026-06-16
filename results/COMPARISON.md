@@ -123,15 +123,28 @@ python scripts/evaluate_yolo.py --config_path src/config/yolo_config_full.json -
 
 ---
 
-## Full dataset — Baseline (TODO)
+## Full dataset — Baseline (ResNet + sliding window)
+
+Checkpoint: `checkpoints/baseline_resnet_full_best.pt`  
+Task: single-class detection, match IoU 0.5, sliding-window threshold 0.7, NMS IoU 0.3
+
+**Important:** these numbers come from the **only full baseline eval we completed** — a **naive random per-image split** (not the group-level anti-leak manifest). After adopting the no-leak protocol we did **not** re-run full baseline train + test on the manifest split (runtime). We do **not** expect honest no-leak metrics to exceed the table below. See `final_report.ipynb` (Section 10.2.1).
 
 
-| Metric      | Baseline (full, no leak)    |
-| ----------- | --------------------------- |
-| Config      | `baseline_config_full.json` |
-| Test images | —                           |
-| mAP         | —                           |
-| F1          | —                           |
+| Metric                      | Baseline (full, random split) |
+| --------------------------- | ----------------------------- |
+| Config                      | `baseline_config_full.json`   |
+| Precision                   | 0.078                         |
+| Recall                      | 0.040                         |
+| F1                          | 0.053                         |
+| mAP @ IoU 0.5               | 0.020                         |
 
 
-Fill after running `evaluate_baseline.py` with `baseline_config_full.json` on the **test** split.
+### Commands used (baseline full, random split — historical run)
+
+```bash
+python scripts/train_model.py --config_path src/config/baseline_config_full.json
+python scripts/evaluate_baseline.py --config_path src/config/baseline_config_full.json --split test
+```
+
+To reproduce on the **no-leak test split**, ensure steps 1–2 of the anti-leak pipeline are done; `baseline_config_full.json` already uses `split_strategy: "manifest"`.

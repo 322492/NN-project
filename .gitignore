@@ -15,7 +15,8 @@ __pycache__/
 
 logs/
 runs/
-results/
+results/*
+!results/COMPARISON.md
 
 scripts/night.py
 scripts/visualize_baseline_pred.py
