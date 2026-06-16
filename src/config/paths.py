@@ -32,6 +32,14 @@ def normalize_config_paths(config: dict) -> dict:
             config["data"]["coco_dir"] = str(resolve_project_path(config["data"]["coco_dir"]))
         if "output_dir" in config["data"]:
             config["data"]["output_dir"] = str(resolve_project_path(config["data"]["output_dir"]))
+        if "split_manifest_path" in config["data"]:
+            config["data"]["split_manifest_path"] = str(
+                resolve_project_path(config["data"]["split_manifest_path"])
+            )
+        if "group_manifest_path" in config["data"]:
+            config["data"]["group_manifest_path"] = str(
+                resolve_project_path(config["data"]["group_manifest_path"])
+            )
 
     if "cnn_training" in config:
         if "checkpoint_path" in config["cnn_training"]:

@@ -11,7 +11,8 @@ if str(PROJECT_ROOT) not in sys.path:
 from src.detection.IoU import match_true_boxes_with_predictions, mean_iou
 from src.models.baseline.cnn_classifier import SimpleCNN
 from src.models.baseline.sliding_window_detection import SlidingWindow
-from scripts.train_baseline_cnn import train, prepare_data_splits
+from scripts.train_baseline_cnn import train
+from src.datasets.data_splits import prepare_data_splits_from_data_config
 from src.detection.bbox_visualization import drew_bbox_and_save, test_image_visualize
 from src.config.load_config import load_config
 from src.config.paths import normalize_config_paths
@@ -37,12 +38,10 @@ best_checkpoint_path = Path(config["cnn_training"]["best_checkpoint_path"])
 
 checkpoint_path = best_checkpoint_path
 
-full_dataset, train_samples, val_samples, test_samples = prepare_data_splits(
+full_dataset, train_samples, val_samples, test_samples = prepare_data_splits_from_data_config(
+    config["data"],
     data_dir=config["data"]["data_dir"],
-    train_ratio=config["data"]["train_ratio"],
-    val_ratio=config["data"]["val_ratio"],
     seed=config["seed"],
-    size=config["data"].get("size"),
 )
 
 print("full dataset images:", len(full_dataset))

@@ -33,6 +33,7 @@ if str(PROJECT_ROOT) not in sys.path:
 from scripts.evaluate_yolo import run_evaluation, save_summary_json
 from scripts.prepare_yolo_dataset import prepare_yolo_dataset
 from src.config.load_config import load_config
+from src.datasets.data_splits import split_kwargs_from_data_config
 from src.config.paths import (
     normalize_config_paths,
     resolve_data_yaml_path,
@@ -207,6 +208,7 @@ def ensure_dataset_ready(
         copy_images=copy_images or bool(data_cfg.get("copy_images", False)),
         single_class=bool(detection_cfg.get("single_class", True)),
         class_name=detection_cfg.get("class_name", "object"),
+        **split_kwargs_from_data_config(data_cfg),
     )
 
     if not data_yaml_path.exists():

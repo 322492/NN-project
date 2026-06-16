@@ -23,7 +23,7 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from src.config.load_config import load_config
 from src.config.paths import normalize_config_paths, resolve_project_path
-from src.datasets.data_splits import prepare_data_splits
+from src.datasets.data_splits import prepare_data_splits_from_data_config
 from src.detection.detection_metrics import (
     calculate_map,
     calculate_precision_recall_f1,
@@ -95,12 +95,10 @@ def run_evaluation(
     nms_iou_threshold = inference_cfg.get("iou_threshold", 0.45)
     match_iou_threshold = metrics_cfg.get("iou_threshold", 0.5)
 
-    full_dataset, train_samples, val_samples, test_samples = prepare_data_splits(
+    full_dataset, train_samples, val_samples, test_samples = prepare_data_splits_from_data_config(
+        data_cfg,
         data_dir=data_cfg["coco_dir"],
-        train_ratio=data_cfg["train_ratio"],
-        val_ratio=data_cfg["val_ratio"],
         seed=seed,
-        size=data_cfg.get("size"),
     )
 
     if evaluation_split == "val":

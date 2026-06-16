@@ -1,8 +1,7 @@
 import lightning as L
-import torch
 from torch.utils.data import DataLoader
 
-from src.datasets.ena24_dataset import ENA24DetectionDataset
+from src.datasets.data_splits import prepare_data_splits_from_data_config
 from src.datasets.ena24_window_dataset import ENA24WindowDataset
 
 
@@ -27,39 +26,17 @@ class ENA24BaselineDataModule(L.LightningDataModule):
 
     def setup(self, stage=None):
         config = self.config
-        seed = config["seed"]
 
-        torch.manual_seed(seed)
-
-        self.full_dataset = ENA24DetectionDataset(
+        (
+            self.full_dataset,
+            self.train_samples,
+            self.val_samples,
+            self.test_samples,
+        ) = prepare_data_splits_from_data_config(
+            config["data"],
             data_dir=config["data"]["data_dir"],
+            seed=config["seed"],
         )
-
-        generator = torch.Generator().manual_seed(seed)
-
-        indices = torch.randperm(
-            len(self.full_dataset),
-            generator=generator,
-        ).tolist()
-
-        size = config["data"].get("size")
-        if size is not None:
-            size = min(size, len(indices))
-            indices = indices[:size]
-
-        train_ratio = config["data"]["train_ratio"]
-        val_ratio = config["data"]["val_ratio"]
-
-        train_size = int(train_ratio * len(indices))
-        val_size = int(val_ratio * len(indices))
-
-        train_indices = indices[:train_size]
-        val_indices = indices[train_size:train_size + val_size]
-        test_indices = indices[train_size + val_size:]
-
-        self.train_samples = [self.full_dataset.samples[i] for i in train_indices]
-        self.val_samples = [self.full_dataset.samples[i] for i in val_indices]
-        self.test_samples = [self.full_dataset.samples[i] for i in test_indices]
 
         self.train_window_dataset = ENA24WindowDataset(
             self.train_samples,
@@ -90,7 +67,7 @@ class ENA24BaselineDataModule(L.LightningDataModule):
         )
 
     def val_dataloader(self):
-        #cropy i prłnr obrazy (dwa dataloadery)
+        # Cropped windows + full images (two val dataloaders)
 
         crop_val_loader = DataLoader(
             self.val_window_dataset,
@@ -110,7 +87,7 @@ class ENA24BaselineDataModule(L.LightningDataModule):
         return [crop_val_loader, detector_val_loader]
 
     def test_dataloader(self):
-        # pełne obrazy
+        # Full images for detection eval
         return DataLoader(
             self.test_samples,
             batch_size=1,
