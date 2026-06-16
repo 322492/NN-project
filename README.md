@@ -6,24 +6,28 @@
 
 ## Deliverables
 
-| Artifact | Path |
-| -------- | ---- |
-| **Final report** (main submission) | [`final_report.ipynb`](final_report.ipynb) |
-| **Presentation** | `Presentation_ProjectTopicMeeting.odp` |
-| **Metrics comparison** | [`results/COMPARISON.md`](results/COMPARISON.md) |
-| **Course outline** | `Project rules & grading - Outline.pdf` |
+
+| Artifact                           | Path                                             |
+| ---------------------------------- | ------------------------------------------------ |
+| **Final report** (main submission) | `[final_report.ipynb](final_report.ipynb)`       |
+| **Presentation**                   | `Presentation.pptx`                              |
+| **Metrics comparison**             | `[results/COMPARISON.md](results/COMPARISON.md)` |
+| **Course outline**                 | `Project rules & grading - Outline.pdf`          |
+
 
 Open `final_report.ipynb` for the full methodology, anti-leak split, experiments, and discussion.
 
 ## Results (summary)
 
-Match IoU **0.5**, full ENA24 (~8789 images). Details and per-run commands: [`results/COMPARISON.md`](results/COMPARISON.md).
+Match IoU **0.5**, full ENA24 (~8789 images). Details and per-run commands: `[results/COMPARISON.md](results/COMPARISON.md)`.
 
-| Model | Split | Eval split | F1 | mAP @ 0.5 |
-| ----- | ----- | ---------- | -- | --------- |
-| YOLOv8n | **No leak** (group manifest) | test | **0.895** | **0.837** |
-| YOLOv8n | Leaky (random per image) | val | 0.959 | 0.938 |
-| Baseline (ResNet + sliding window) | Random per image only | test | 0.053 | 0.020 |
+
+| Model                              | Split                        | Eval split | F1        | mAP @ 0.5 |
+| ---------------------------------- | ---------------------------- | ---------- | --------- | --------- |
+| YOLOv8n                            | **No leak** (group manifest) | test       | **0.895** | **0.837** |
+| YOLOv8n                            | Leaky (random per image)     | val        | 0.959     | 0.938     |
+| Baseline (ResNet + sliding window) | Random per image only        | test       | 0.053     | 0.020     |
+
 
 YOLO on the **no-leak test split** is the primary quantitative result. Baseline full was only evaluated on a naive random split before the anti-leak protocol was finalized; a no-leak baseline re-run was not completed (see report §10.2.1).
 
@@ -63,11 +67,13 @@ results/                    # Eval JSON etc. (COMPARISON.md is in git)
 
 ENA24 COCO annotations include many species, but models are trained as **single-class** detection (`object`). Metrics match predictions to ground truth by **IoU only** (class-agnostic). YOLO: `prepare_yolo_dataset.py` writes all boxes as class `0` unless `--multi_class` is passed.
 
-| Component | Approach |
-| --------- | -------- |
-| Baseline | Binary window classifier + sliding window + NMS |
-| YOLO | YOLOv8n, `nc: 1`, Ultralytics pipeline |
-| Metrics | `src/detection/detection_metrics.py` |
+
+| Component | Approach                                        |
+| --------- | ----------------------------------------------- |
+| Baseline  | Binary window classifier + sliding window + NMS |
+| YOLO      | YOLOv8n, `nc: 1`, Ultralytics pipeline          |
+| Metrics   | `src/detection/detection_metrics.py`            |
+
 
 ## Dataset: ENA24
 
@@ -125,10 +131,12 @@ Preview collages: `data/ena24_full/metadata/cluster_previews/`.
 
 ## Baseline (ResNet + sliding window)
 
-| Config | Data | Split |
-| ------ | ---- | ----- |
-| `src/config/baseline_config.json` | `ena24_sample` | random |
-| `src/config/baseline_config_full.json` | `ena24_full` | manifest |
+
+| Config                                 | Data           | Split    |
+| -------------------------------------- | -------------- | -------- |
+| `src/config/baseline_config.json`      | `ena24_sample` | random   |
+| `src/config/baseline_config_full.json` | `ena24_full`   | manifest |
+
 
 **Train:**
 
@@ -152,10 +160,12 @@ Full test-set sliding-window eval is slow on CPU; use GPU or the sample config f
 
 ## YOLO (YOLOv8n)
 
-| Config | Data | YOLO export | Epochs (config) |
-| ------ | ---- | ----------- | ----------------- |
-| `src/config/yolo_config.json` | `ena24_sample` | `data/ena24_yolo` | 30 |
-| `src/config/yolo_config_full.json` | `ena24_full` | `data/ena24_yolo_full` | **20** |
+
+| Config                             | Data           | YOLO export            | Epochs (config) |
+| ---------------------------------- | -------------- | ---------------------- | --------------- |
+| `src/config/yolo_config.json`      | `ena24_sample` | `data/ena24_yolo`      | 30              |
+| `src/config/yolo_config_full.json` | `ena24_full`   | `data/ena24_yolo_full` | **20**          |
+
 
 **Prepare → train → evaluate:**
 
